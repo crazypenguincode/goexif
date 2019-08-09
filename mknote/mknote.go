@@ -52,15 +52,19 @@ type nikonV3 struct{}
 
 // Parse decodes all Nikon makernote data found in x and adds it to x.
 func (_ *nikonV3) Parse(x *exif.Exif) error {
+	mkType := "Nikon\000"
 	m, err := x.Get(exif.MakerNote)
 	if err != nil {
 		return nil
-	} else if bytes.Compare(m.Val[:6], []byte("Nikon\000")) != 0 {
+	} else if len(m.Val) < len(mkType) || bytes.Compare(m.Val[:6], []byte(mkType)) != 0 {
 		return nil
 	}
 
 	// Nikon v3 maker note is a self-contained IFD (offsets are relative
 	// to the start of the maker note)
+	if len(m.Val) < 10 {
+		return nil
+	}
 	mkNotes, err := tiff.Decode(bytes.NewReader(m.Val[10:]))
 	if err != nil {
 		return err
